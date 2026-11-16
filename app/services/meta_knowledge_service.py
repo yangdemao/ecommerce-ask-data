@@ -93,6 +93,8 @@ class MetaKnowledgeService:
                 column_infos.append(column_info)
 
         async with self.meta_mysql_repository.session.begin():
+            # 先清空旧的表和字段元数据，保证重复构建时是全量覆盖
+            await self.meta_mysql_repository.clear_table_meta()
             self.meta_mysql_repository.save_table_infos(table_infos)
             self.meta_mysql_repository.save_column_infos(column_infos)
 
@@ -100,7 +102,8 @@ class MetaKnowledgeService:
 
     async def _save_column_info_to_qdrant(self, column_infos: list[ColumnInfo]):
         """把字段元数据继续推进成可语义检索的 Qdrant 向量点"""
-        await self.column_qdrant_repository.ensure_collection()
+        # 每次重建都先清空集合，避免同一字段因为重复构建产生多份向量点
+        await self.column_qdrant_repository.recreate_collection()
 
         points: list[dict] = []
         for column_info in column_infos:
@@ -205,6 +208,8 @@ class MetaKnowledgeService:
 
         # 指标本身和字段关系要放在同一笔事务里，避免只写入其中一部分
         async with self.meta_mysql_repository.session.begin():
+            # 先清空旧指标和字段关系，避免指标口径调整后残留历史数据
+            await self.meta_mysql_repository.clear_metric_meta()
             self.meta_mysql_repository.save_metric_infos(metric_infos)
             self.meta_mysql_repository.save_column_metrics(column_metrics)
 
@@ -212,7 +217,8 @@ class MetaKnowledgeService:
 
     async def _save_metrics_to_qdrant(self, metric_infos: list[MetricInfo]):
         """把指标元数据继续推进成可语义检索的 Qdrant 向量点"""
-        await self.metric_qdrant_repository.ensure_collection()
+        # 同字段集合一样，指标集合也在每次重建时清空后重新写入
+        await self.metric_qdrant_repository.recreate_collection()
 
         points: list[dict] = []
         for metric_info in metric_infos:

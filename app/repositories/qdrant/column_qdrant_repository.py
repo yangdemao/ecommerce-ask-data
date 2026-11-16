@@ -33,6 +33,13 @@ class ColumnQdrantRepository:
                 ),
             )
 
+    async def recreate_collection(self):
+        """删除并重建集合，避免重复构建时向量点不断累积"""
+
+        if await self.client.collection_exists(self.collection_name):
+            await self.client.delete_collection(self.collection_name)
+        await self.ensure_collection()
+
     async def upsert(
         self,
         ids: list[str],

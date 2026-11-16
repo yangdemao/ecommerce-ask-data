@@ -8,7 +8,7 @@ Repository 自身只关心“如何写入”，而“哪些写操作要放在同
 问数链路运行时也会从这里读取元数据，用来把召回到的 id 补齐成完整实体
 """
 
-from sqlalchemy import text
+from sqlalchemy import delete, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.entities.column_info import ColumnInfo
@@ -16,6 +16,8 @@ from app.entities.column_metric import ColumnMetric
 from app.entities.metric_info import MetricInfo
 from app.entities.table_info import TableInfo
 from app.models.column_info import ColumnInfoMySQL
+from app.models.column_metric import ColumnMetricMySQL
+from app.models.metric_info import MetricInfoMySQL
 from app.models.table_info import TableInfoMySQL
 from app.repositories.mysql.meta.mappers.column_info_mapper import ColumnInfoMapper
 from app.repositories.mysql.meta.mappers.column_metric_mapper import ColumnMetricMapper
@@ -28,6 +30,19 @@ class MetaMySQLRepository:
 
     def __init__(self, session: AsyncSession):
         self.session = session
+
+    async def clear_table_meta(self):
+        """清空表和字段元数据，保证重复构建时是整表覆盖而不是不断追加"""
+
+        await self.session.execute(delete(ColumnInfoMySQL))
+        await self.session.execute(delete(TableInfoMySQL))
+
+    async def clear_metric_meta(self):
+        """清空指标及其字段依赖关系，避免配置调整后残留旧口径"""
+
+        # column_metric 是字段和指标之间的关系表，跟着指标一起重建
+        await self.session.execute(delete(ColumnMetricMySQL))
+        await self.session.execute(delete(MetricInfoMySQL))
 
     def save_table_infos(self, table_infos: list[TableInfo]):
         """批量保存表元数据。输入仍然是业务实体，而不是 ORM 模型"""
