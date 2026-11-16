@@ -15,7 +15,7 @@
 
 </div>
 
-![电商问数前端首页：样例问题与自然语言输入](docs/images/ecommerce-ask-data-home.png)
+![电商问数演示：输入自然语言问题，实时展示 LangGraph 执行流程并流式返回查询结果](docs/images/demo.gif)
 
 ## 项目概述
 
@@ -85,6 +85,8 @@
 ### 7. 自研前端
 
 React 19 + Vite + Tailwind CSS 玻璃拟态 UI，包含 LangGraph 全流程可视化、SSE 流式渲染、打字机效果、入场渐次浮现、行高亮与微交互套件，无第三方重型组件库依赖。
+
+![电商问数前端首页：样例问题与自然语言输入](docs/images/ecommerce-ask-data-home.png)
 
 ## 评测结果
 
