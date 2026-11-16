@@ -1,0 +1,242 @@
+/**
+ * 全局样式入口
+ * 加载 Tailwind 层并定义玻璃渐变风格的基础样式
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+    color-scheme: light;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    background: #eef1fa;
+    overflow: hidden;
+}
+
+button,
+textarea {
+    font: inherit;
+}
+
+::selection {
+    background: rgba(91, 94, 214, 0.18);
+}
+
+/* —— 微交互：圈点光标 —— */
+body.cursorfx-active {
+    cursor: none;
+}
+
+body.cursorfx-active input,
+body.cursorfx-active textarea {
+    cursor: text;
+}
+
+.cursorfx-layer {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.cursorfx-layer.cursorfx-hidden {
+    visibility: hidden;
+}
+
+.cursorfx-dot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 9999px;
+    background: #5b5ed6;
+}
+
+.cursorfx-ring {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 26px;
+    height: 26px;
+    border-radius: 9999px;
+    border: 1.5px solid rgba(91, 94, 214, 0.55);
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.cursorfx-ring.cursorfx-press {
+    background: rgba(91, 94, 214, 0.18);
+    border-color: rgba(91, 94, 214, 0.85);
+}
+
+.cursorfx-hand {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 16px;
+    height: 16px;
+    color: #5b5ed6;
+    opacity: 0;
+    transform-origin: 0 0;
+}
+
+.cursorfx-hand svg {
+    display: block;
+    transform: rotate(-15deg);
+    filter: drop-shadow(0 1px 2px rgba(38, 37, 60, 0.25));
+    transition: opacity 0.15s ease;
+}
+
+.cursorfx-layer.cursorfx-on-button .cursorfx-hand {
+    opacity: 1;
+}
+
+/* —— 微交互：点击水波纹 —— */
+.cursorfx-ripples {
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    pointer-events: none;
+    overflow: hidden;
+}
+
+.cursorfx-ripple {
+    position: absolute;
+    border-radius: 9999px;
+    animation: fx-ripple 0.6s ease-out forwards;
+}
+
+@keyframes fx-ripple {
+    from {
+        transform: scale(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 0;
+    }
+}
+
+/* —— 微交互：入场渐次浮现 —— */
+.msg-in {
+    animation: msg-in 0.35s ease-out both;
+}
+
+.stagger-in > * {
+    animation: msg-in 0.45s ease-out both;
+}
+
+.stagger-in > *:nth-child(1) {
+    animation-delay: 0.04s;
+}
+
+.stagger-in > *:nth-child(2) {
+    animation-delay: 0.1s;
+}
+
+.stagger-in > *:nth-child(3) {
+    animation-delay: 0.16s;
+}
+
+.stagger-in > *:nth-child(4) {
+    animation-delay: 0.22s;
+}
+
+.stagger-in > *:nth-child(5) {
+    animation-delay: 0.28s;
+}
+
+.stagger-in > *:nth-child(6) {
+    animation-delay: 0.34s;
+}
+
+@keyframes msg-in {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* —— 微交互：结果表格行悬停 —— */
+.result-row {
+    transition: background-color 0.15s ease;
+}
+
+.result-row:hover {
+    background: rgba(91, 94, 214, 0.08);
+}
+
+.result-row td:first-child {
+    position: relative;
+}
+
+.result-row td:first-child::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: #5b5ed6;
+    opacity: 0;
+    transform: scaleY(0.4);
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.result-row:hover td:first-child::before {
+    opacity: 1;
+    transform: scaleY(1);
+}
+
+/* —— 微交互：打字机光标 —— */
+.tw-caret {
+    display: inline-block;
+    width: 2px;
+    height: 1.05em;
+    margin-left: 2px;
+    vertical-align: -0.15em;
+    background: #5b5ed6;
+    animation: tw-blink 0.8s steps(1) infinite;
+}
+
+@keyframes tw-blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
