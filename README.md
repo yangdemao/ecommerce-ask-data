@@ -86,6 +86,29 @@
 
 React 19 + Vite + Tailwind CSS 玻璃拟态 UI，包含 LangGraph 全流程可视化、SSE 流式渲染、打字机效果、入场渐次浮现、行高亮与微交互套件，无第三方重型组件库依赖。
 
+## 评测结果
+
+为了验证它不是"能跑通"而是"跑得准"，我给项目建了一套可复现的评测集，用业界通用的**执行准确率（Execution Accuracy）** 衡量效果：不比对 SQL 文本，只比对查询结果是否与标准 SQL 完全一致。
+
+| 指标 | 结果 |
+| ---- | ---- |
+| 题集规模 | 30 条（easy 8 / medium 17 / hard 5） |
+| SQL 可执行率 | 30/30（100%） |
+| 执行准确率 EX | 28/30（93.3%） |
+| 端到端耗时 | P50 31.8s |
+
+题集覆盖多表关联聚合、时间过滤、TopN 排序、指标口径（GMV/AOV）、值枚举、HAVING、去重计数七类场景。两例未命中经人工复核分别为日期键等价（`day` 与 `date_id`）与额外返回排名列，**不存在表选错、字段选错或口径算错**。
+
+```bash
+# 只校验标准 SQL 是否可执行（不消耗大模型额度）
+uv run python -m app.scripts.eval_text2sql --check-golden
+
+# 跑全量评测，逐题明细写入 eval/report.csv
+uv run python -m app.scripts.eval_text2sql
+```
+
+题集在 [eval/questions.yaml](eval/questions.yaml)，跑分脚本在 [app/scripts/eval_text2sql.py](app/scripts/eval_text2sql.py)，支持 `--ids`、`--limit` 抽样运行。
+
 ## 系统架构
 
 ![NL2SQL 系统架构](docs/images/nl2sql-architecture.jpg)
