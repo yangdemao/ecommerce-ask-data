@@ -1,89 +1,120 @@
 <div align='center'>
   <h1 style="margin-top: 15px;">「电商问数」智能数据分析 Agent</h1>
   <h4><b>ecommerce-ask-data</b></h4>
-  <p><em>混合检索 + LangGraph 多阶段推理 + SQL 生成/校验/修正/执行 + FastAPI SSE 流式交付的端到端 Text2SQL 实战项目</em></p>
+  <p><em>面向电商数仓场景的端到端 Text2SQL 智能体：混合检索 + LangGraph 多阶段推理 + SQL 生成/校验/修正/执行 + SSE 流式交付</em></p>
 </div>
 
 <div align='center'>
 
-![AI](https://img.shields.io/badge/AI-Agent-00c853?style=flat)
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB.svg?logo=python&logoColor=white)
-![LangGraph](https://img.shields.io/badge/LangGraph-Agentic%20Workflow-1C3C3C.svg)
+![LangGraph](https://img.shields.io/badge/LangGraph-13%20Nodes-1C3C3C.svg)
+![FastAPI](https://img.shields.io/badge/FastAPI-SSE-009688.svg?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)
+![Qdrant](https://img.shields.io/badge/Qdrant-Vector-222222.svg)
+![Elasticsearch](https://img.shields.io/badge/Elasticsearch-Fulltext-005571.svg?logo=elasticsearch&logoColor=white)
 
 </div>
 
-如果你正在找一个能覆盖 `LangGraph`、`Qdrant`、`Elasticsearch`、`MySQL`、`FastAPI` 和 AI Agent 工程开发的完整实战项目，「电商问数」值得你完整读一遍源码。
+![电商问数前端首页：样例问题与自然语言输入](docs/images/ecommerce-ask-data-home.png)
 
-它不是只调用一次大模型接口，也不是写几个 Prompt 演示 SQL 生成结果。这个项目围绕电商数仓问数场景：先构建元数据知识库，再做字段、指标、字段取值的三路并行混合检索，随后用 LangGraph 编排 13 个节点的问数流程，完成 SQL 生成、EXPLAIN 校验、错误修正、执行与结果分析，最终由自研前端以 SSE 流式渲染并支持一键导出。
+## 项目概述
 
-> 说明：本项目的架构设计参考了开源教程体系 [ai-agents-from-zero](https://github.com/didilili/ai-agents-from-zero)（MIT 协议）。在吃透原设计的基础上，我独立完成了结果分析节点、查询结果导出（TSV/Markdown/CSV/JSON）、前端玻璃拟态改版与微交互套件，以及全链路前后端联调与稳定性修复。
+这是我独立开发并完整落地的一个 **Text2SQL 智能问数项目**。它解决的问题很实际：业务同学不会写 SQL，分析师又记不住所有表结构、字段含义、指标口径和字段取值。把自然语言直接丢给大模型，很容易出现选错表、选错字段、指标理解偏差和 SQL 幻觉。
 
-![电商问数前端首页：样例问题、自然语言输入和智能数据分析 Agent 界面](docs/images/ecommerce-ask-data-home.jpg)
+我的做法不是让模型"一步直出 SQL"，而是搭建了一条完整的工程链路：
 
-## 📖 项目介绍
+1. **元数据知识库**：对电商数仓做表/字段/指标/取值四层元数据建模，同步写入结构化库、向量库和全文索引。
+2. **混合检索**：围绕用户问题，字段、指标、取值三路并行召回，再合并、重排与过滤，为模型提供准确上下文。
+3. **LangGraph 工作流**：用 13 个节点的状态机编排关键词抽取、召回、SQL 生成、EXPLAIN 校验、错误修正、执行与结果分析的全流程。
+4. **服务与前端**：FastAPI 以 SSE 流式协议实时推送每个节点的执行进度与结果，React 前端做流程可视化、打字机渲染和结果一键导出。
 
-在真实问数场景里，业务同学通常不会写 SQL，数据分析同学也很难随时记住所有表结构、字段含义、指标口径和字段取值。单纯把自然语言问题直接交给大模型，很容易出现表选错、字段选错、指标理解错和 SQL 幻觉等问题。
+> 项目的初始架构设计参考了开源教程体系 [ai-agents-from-zero](https://github.com/didilili/ai-agents-from-zero)（MIT 协议）。在吃透原设计的基础上，本项目由我独立完成结果分析节点、查询结果导出（TSV/Markdown/CSV/JSON）、前端玻璃拟态改版与微交互套件，以及全链路前后端联调与稳定性修复。
 
-`电商问数` 要解决的就是这个问题：
+## 核心亮点
 
-- 用户用自然语言提问
-- 系统自动召回相关字段、指标和字段取值
-- 大模型基于上下文进行分步推理
-- 生成 SQL 并查询数据仓库
-- 以流式方式返回分析结果
+### 1. LangGraph 13 节点问数工作流
 
-## ✨ 项目亮点
+不是简单的 Prompt 串联，而是一个带条件分支的有状态图：
 
-- **检索 + 推理 + 生成，而不是模型直出 SQL**
-    - 先围绕问题召回相关字段、指标和值域，再组织上下文生成 SQL，整体链路更稳、更可控。
-- **面向企业问数场景的混合检索**
-    - `Qdrant` 负责字段和指标的语义召回。
-    - `Elasticsearch` 负责字段取值的全文检索。
-    - `MySQL` 负责保存完整、权威的结构化元数据。
-- **支持字段、指标、取值三类信息协同召回**
-    - 比单纯做表级或字段级检索更贴近真实企业分析流程。
-- **从检索到执行的完整可运行链路**
-    - 不停留在 Prompt 设计，而是会真实生成 SQL、执行查询，并以流式方式返回结果。
-- **工程化后端结构清晰**
-    - 基于 `FastAPI + LangGraph + Repository + Client Manager` 组织配置、客户端、仓储层、服务层与智能体流程，便于维护和扩展。
-- **结果分析与结果导出**
-    - SQL 执行完成后由 LLM 自动生成三五句话的数据解读；查询结果支持一键复制 TSV/Markdown、下载 CSV（含 BOM，Excel 中文不乱码）与 JSON。
-- **完整自研前端**
-    - React 19 + Vite + Tailwind 玻璃拟态 UI，LangGraph 全流程可视化、SSE 流式渲染、打字机效果与微交互套件。
+- 抽取关键词后，**字段 / 指标 / 取值三路并行召回**，再合并过滤；
+- SQL 生成后先走 **EXPLAIN 干跑校验**，无效 SQL 进入修正节点重试，而不是直接执行报错；
+- 校验通过后执行 SQL，最后由 LLM 基于查询结果自动生成数据解读文案。
 
-项目覆盖大模型应用开发的完整技术栈：`FastAPI`、`LangGraph`、`LangChain`、`Qdrant`、`Elasticsearch`、`MySQL`、`TEI Embedding`、`React`、`Vite`、`Tailwind CSS`，可以说清楚数据层、检索层、智能体层、服务层和前端层分别做了什么。
+![LangGraph 执行流程可视化：节点状态实时流转](docs/images/ecommerce-ask-data-flow.png)
 
-## 🏗️ 系统架构
+### 2. 面向企业元数据的混合检索架构
+
+单一向量检索对"字段取值"这类精确匹配召回效果差，我按信息类型拆分了三条检索通道：
+
+| 通道 | 存储 | 职责 |
+| ---- | ---- | ---- |
+| 语义召回 | `Qdrant` + `bge-large-zh-v1.5` | 字段、指标的语义匹配 |
+| 全文召回 | `Elasticsearch`（IK 分词） | 字段真实取值的关键词检索 |
+| 权威元数据 | `MySQL` | 完整的表/字段/指标结构化信息，召回后过滤校验 |
+
+### 3. SSE 流式事件协议
+
+后端把 Agent 的每一步推理过程实时推给前端，四种事件类型覆盖全生命周期：
+
+| 类型 | 含义 |
+| ---- | ---- |
+| `progress` | 节点执行进度 |
+| `result` | 最终查询结果 |
+| `analysis` | LLM 结果分析文案 |
+| `error` | 全局异常消息 |
+
+前端据此渲染节点状态流转，用户能直观看到 Agent"想到了哪一步"。
+
+### 4. 全链路请求追踪
+
+基于 `ContextVar` + `loguru` 为每个并发请求注入 `request_id`，所有节点日志自动携带链路标识，多请求并发时可精确聚合单次问数的完整执行过程，大幅降低排障成本。
+
+![后端日志：request_id 贯穿全链路，SQL 生成/校验/执行/分析逐节点可查](docs/images/ecommerce-ask-data-logs.png)
+
+### 5. 结果分析与一键导出
+
+- SQL 执行完成后，LLM 自动生成三五句话的数据解读，指出趋势、异常与关注点；
+- 查询结果支持一键复制 TSV/Markdown、下载 CSV（含 BOM，Excel 打开中文不乱码）与 JSON。
+
+![查询结果页：结果表格、分析文案与多格式导出](docs/images/ecommerce-ask-data-result.png)
+
+### 6. 工程化后端结构
+
+`FastAPI + LangGraph + Repository + Client Manager` 分层组织：配置加载、客户端生命周期、仓储层、服务层与智能体节点职责清晰，新增一路召回或一个节点不需要动整体框架。
+
+### 7. 自研前端
+
+React 19 + Vite + Tailwind CSS 玻璃拟态 UI，包含 LangGraph 全流程可视化、SSE 流式渲染、打字机效果、入场渐次浮现、行高亮与微交互套件，无第三方重型组件库依赖。
+
+## 系统架构
 
 ![NL2SQL 系统架构](docs/images/nl2sql-architecture.jpg)
 
 项目围绕两条主线展开：
 
-| 主线             | 做什么                                                                   | 涉及模块                                     |
-| ---------------- | ------------------------------------------------------------------------ | -------------------------------------------- |
-| 元数据知识库构建 | 抽取教学数仓中的表、字段、指标和字段取值，写入结构化库、向量库和全文索引 | `MySQL` / `Qdrant` / `Elasticsearch` / `TEI` |
-| 自然语言问数     | 基于用户问题完成召回、上下文整理、SQL 生成校验执行，并把过程流式返回前端 | `LangGraph` / `FastAPI` / `SSE` / `React`    |
+| 主线 | 做什么 | 涉及模块 |
+| ---- | ------ | -------- |
+| 元数据知识库构建 | 抽取电商数仓中的表、字段、指标和字段取值，写入结构化库、向量库和全文索引 | `MySQL` / `Qdrant` / `Elasticsearch` / `TEI` |
+| 自然语言问数 | 基于用户问题完成召回、上下文整理、SQL 生成校验执行，并把过程流式返回前端 | `LangGraph` / `FastAPI` / `SSE` / `React` |
 
-![电商问数查询结果页：LangGraph 执行流程、SQL 校验执行和查询结果表格](docs/images/ecommerce-ask-data-query-result.jpg)
+## 技术栈
 
-## 🛠️ 项目技术栈
+| 模块 | 技术 | 作用 |
+| ---- | ---- | ---- |
+| 示例数仓 | `MySQL` | 事实表、维度表和分析型查询环境 |
+| 元数据库 | `MySQL` / `SQLAlchemy` | 保存表、字段、指标、字段指标关系等结构化元数据 |
+| 向量检索 | `Qdrant` | 字段和指标向量存储，语义召回 |
+| 全文检索 | `Elasticsearch`（IK） | 字段真实取值存储，关键词检索 |
+| Embedding | `TEI` / `BAAI/bge-large-zh-v1.5` | 字段、指标、问题的向量化 |
+| 智能体编排 | `LangGraph` | 13 节点多阶段问数工作流 |
+| 模型接入 | `LangChain` | 封装 LLM 与 Embedding 调用 |
+| 后端接口 | `FastAPI` | 问数 API、依赖注入、生命周期管理 |
+| 流式协议 | `SSE` | 实时推送节点进度、结果与错误 |
+| 前端 | `React 19` / `Vite` / `Tailwind CSS` | 聊天式问数界面与流程可视化 |
+| 日志追踪 | `ContextVar` / `loguru` | request_id 全链路日志 |
+| 依赖管理 | `uv` / `pnpm` | Python 后端与前端依赖管理 |
 
-| 模块       | 技术                              | 作用                                           |
-| ---------- | --------------------------------- | ---------------------------------------------- |
-| 教学数仓   | `MySQL`                           | 模拟事实表、维度表和分析型查询环境             |
-| 元数据库   | `MySQL` / `SQLAlchemy`            | 保存表、字段、指标、字段指标关系等结构化元数据 |
-| 向量检索   | `Qdrant`                          | 保存字段和指标向量，支持语义召回               |
-| 全文检索   | `Elasticsearch`                   | 保存字段真实取值，支持关键词和值域检索         |
-| Embedding  | `TEI` / `BAAI/bge-large-zh-v1.5`  | 将字段、指标、问题等文本转成向量               |
-| 智能体编排 | `LangGraph`                       | 组织多阶段问数工作流                           |
-| 模型接入   | `LangChain`                       | 封装 LLM 与 Embedding 调用                     |
-| 后端接口   | `FastAPI`                         | 提供问数 API、依赖注入和生命周期管理           |
-| 流式协议   | `SSE`                             | 实时返回节点进度、查询结果和错误消息           |
-| 前端       | `React` / `Vite` / `Tailwind CSS` | 提供聊天式问数界面和流程展示                   |
-| 日志追踪   | `ContextVar` / `loguru`           | 为并发请求注入 request_id，便于排查链路        |
-| 依赖管理   | `uv` / `pnpm`                     | 管理 Python 后端和前端依赖                     |
-
-## 📁 项目结构
+## 项目结构
 
 ```text
 ecommerce-ask-data/
@@ -107,9 +138,7 @@ ecommerce-ask-data/
 └── pyproject.toml        # Python 项目依赖与工具配置
 ```
 
-## 🚀 快速开始
-
-当前仓库已经包含一套可直接启动的本地开发环境，你可以按照以下顺序启动项目。
+## 快速开始
 
 ### 1. 准备环境
 
@@ -156,13 +185,13 @@ llm:
 
 ### 5. 准备 Embedding 模型
 
-项目通过 `TEI` 加载 `BAAI/bge-large-zh-v1.5`。模型文件体积较大，无法再仓库中进行提交，需要先下载到 Docker 挂载目录：
+项目通过 `TEI` 加载 `BAAI/bge-large-zh-v1.5`。模型文件体积较大，无法在仓库中提交，需要先下载到 Docker 挂载目录：
 
 ```bash
 uv run hf download BAAI/bge-large-zh-v1.5 --local-dir docker/embedding/bge-large-zh-v1.5
 ```
 
-如果手动下载，请解压到：`docker/embedding/bge-large-zh-v1.5`路径下。
+如果手动下载，请解压到：`docker/embedding/bge-large-zh-v1.5` 路径下。
 
 ### 6. 启动 Docker 基础服务
 
@@ -172,13 +201,13 @@ docker compose -f docker/docker-compose.yaml up -d
 
 默认端口：
 
-| 服务          | 端口   |
-| ------------- | ------ |
-| MySQL         | `3306` |
+| 服务 | 端口 |
+| ---- | ---- |
+| MySQL | `3306` |
 | Elasticsearch | `9200` |
-| Kibana        | `5601` |
-| Qdrant        | `6333` |
-| Embedding     | `8081` |
+| Kibana | `5601` |
+| Qdrant | `6333` |
+| Embedding | `8081` |
 
 > `docker/mysql/meta.sql` 和 `docker/mysql/dw.sql` 会在 MySQL 容器首次启动时自动初始化元数据库和示例数仓。
 
@@ -212,15 +241,6 @@ POST http://127.0.0.1:8000/api/query
 }
 ```
 
-SSE 消息类型：
-
-| 类型       | 含义             |
-| ---------- | ---------------- |
-| `progress` | 节点执行进度     |
-| `result`   | 最终查询结果     |
-| `analysis` | LLM 结果分析文案 |
-| `error`    | 全局异常消息     |
-
 ### 9. 启动前端
 
 ```bash
@@ -240,27 +260,25 @@ cp .env.example .env
 VITE_DEV_PROXY_TARGET=http://127.0.0.1:8000
 ```
 
-## 🧭 开发里程碑
+## 开发里程碑
 
-| 阶段         | 内容                                                                        |
-| ------------ | ------------------------------------------------------------------------- |
-| 基础设施     | uv 依赖管理、OmegaConf 分层配置、loguru 结构化日志、Docker Compose 编排 MySQL/Qdrant/ES/TEI |
-| 元数据知识库 | 表/字段/指标元数据入库，字段向量索引、字段取值全文索引、指标向量索引三线构建               |
-| 混合检索     | LLM 关键词抽取，字段/指标/取值三路并行召回，合并、重排与过滤                              |
-| 智能体工作流 | LangGraph 13 节点：上下文构建 → SQL 生成 → EXPLAIN 校验 → 错误修正 → 执行 → 结果分析      |
-| 服务层       | FastAPI `/api/query` SSE 流式接口、QueryService 依赖组装、request_id 全链路日志          |
-| 前端与交付   | React 玻璃拟态 UI、流程可视化、流式渲染与微交互、结果一键导出（TSV/MD/CSV/JSON）          |
+| 阶段 | 内容 |
+| ---- | ---- |
+| 基础设施 | uv 依赖管理、OmegaConf 分层配置、loguru 结构化日志、Docker Compose 编排 MySQL/Qdrant/ES/TEI |
+| 元数据知识库 | 表/字段/指标元数据入库，字段向量索引、字段取值全文索引、指标向量索引三线构建 |
+| 混合检索 | LLM 关键词抽取，字段/指标/取值三路并行召回，合并、重排与过滤 |
+| 智能体工作流 | LangGraph 13 节点：上下文构建 → SQL 生成 → EXPLAIN 校验 → 错误修正 → 执行 → 结果分析 |
+| 服务层 | FastAPI `/api/query` SSE 流式接口、QueryService 依赖组装、request_id 全链路日志 |
+| 前端与交付 | React 玻璃拟态 UI、流程可视化、流式渲染与微交互、结果一键导出（TSV/MD/CSV/JSON） |
 
-## 🚧 能力边界
+## 能力边界与后续规划
 
-这套项目主要关注智能问数的学习流程，不刻意覆盖生产治理能力，例如：
+当前版本聚焦把智能问数最关键、最必要的工程链路完整落地并稳定跑通。以下是我明确知道还没做、但已经规划好的方向：
 
-- 用户登录、角色权限和数据权限控制
-- 多租户隔离
-- SQL 安全审计和执行白名单
-- 查询缓存、限流和性能治理
+- SQL 安全审计与执行白名单、查询缓存与限流
+- 多轮问数的会话记忆与追问改写
 - 系统化评测集与自动化回归评测
-- 监控告警、链路追踪平台和灰度发布
-- 更复杂的多轮问数记忆、追问改写和会话管理
+- 用户权限与多租户隔离
+- 监控告警与灰度发布
 
-这些能力适合在基础流程跑通之后继续扩展。`ecommerce-ask-data` 的定位是把智能问数最关键、最必要的工程链路完整落地并稳定跑通，为后续扩展企业级能力打下基础。
+这些扩展点也正是这个项目接下来值得继续深挖的地方。
