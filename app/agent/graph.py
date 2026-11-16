@@ -43,6 +43,20 @@ from app.repositories.qdrant.metric_qdrant_repository import MetricQdrantReposit
 # StateGraph 声明整张图使用的状态结构和运行时上下文结构
 graph_builder = StateGraph(state_schema=DataAgentState, context_schema=DataAgentContext)
 
+# SQL 修正最多重试的次数，超过之后不再继续兜圈，直接交给执行节点把错误抛给前端
+MAX_SQL_RETRY = 2
+
+
+def route_after_validate(state: DataAgentState) -> str:
+    """校验通过就执行；校验失败且还有重试次数就进入修正"""
+
+    if state.get("error") is None:
+        return "run_sql"
+    if state.get("retry_count", 0) >= MAX_SQL_RETRY:
+        return "run_sql"
+    return "correct_sql"
+
+
 # 注册节点：每个节点负责问数链路中的一个清晰步骤
 graph_builder.add_node("extract_keywords", extract_keywords)
 graph_builder.add_node("recall_column", recall_column)
@@ -81,13 +95,13 @@ graph_builder.add_edge("filter_metric", "add_extra_context")
 graph_builder.add_edge("add_extra_context", "generate_sql")
 graph_builder.add_edge("generate_sql", "validate_sql")
 
-# SQL 校验通过就直接执行，校验失败则先进入修正节点
+# SQL 校验通过就直接执行；校验失败且未超过重试上限则进入修正，修正后回到校验继续判断
 graph_builder.add_conditional_edges(
     source="validate_sql",
-    path=lambda state: "run_sql" if state["error"] is None else "correct_sql",
+    path=route_after_validate,
     path_map={"run_sql": "run_sql", "correct_sql": "correct_sql"},
 )
-graph_builder.add_edge("correct_sql", "run_sql")
+graph_builder.add_edge("correct_sql", "validate_sql")
 # SQL 执行完成后进入结果分析，分析失败会在节点内部自行降级，不影响已推送的结果
 graph_builder.add_edge("run_sql", "analyze_result")
 graph_builder.add_edge("analyze_result", END)

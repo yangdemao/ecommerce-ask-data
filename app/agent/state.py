@@ -78,6 +78,8 @@ class DataAgentState(TypedDict):
 
     error: str  # 校验SQL时出现的错误信息
 
+    retry_count: int  # SQL 修正次数，用于控制修正节点的重试上限
+
     result: list[dict]  # SQL执行结果（字典列表）
 
     analysis: str  # LLM对结果的简短分析
