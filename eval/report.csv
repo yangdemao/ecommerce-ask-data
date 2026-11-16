@@ -1,0 +1,66 @@
+﻿题号,问题,难度,考察点,标准SQL执行成功,模型SQL可执行,结果一致,耗时(秒),模型SQL,错误信息
+E01,统计华北地区的销售总额,easy,多表关联 值过滤,True,True,True,18.2,SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_region d ON f.region_id = d.region_id WHERE d.region_name = '华北',
+E02,统计2025年第一季度各大区的GMV，并按GMV从高到低排序,medium,指标口径 时间过滤 排序,True,True,True,21.2,"SELECT d.region_name AS 大区, SUM(f.order_amount) AS GMV FROM fact_order f JOIN dim_date t ON f.date_id = t.date_id JOIN dim_region d ON f.region_id = d.region_id WHERE t.year = 2025 AND t.quarter = 'Q1' GROUP BY d.region_name ORDER BY GMV DESC",
+E03,2025年3月各商品品类的销量和销售额,medium,时间过滤 分组聚合,True,True,True,34.4,"SELECT p.category AS 商品品类, SUM(f.order_quantity) AS 销量, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE d.date_id BETWEEN 20250301 AND 20250331 GROUP BY p.category",
+E04,华南地区2025年第一季度销售总额最高的前5个商品,hard,四表关联 时间过滤 TopN,True,True,True,27.4,"SELECT
+    p.product_name AS 商品名称,
+    SUM(f.order_amount) AS 销售总额
+FROM fact_order f
+JOIN dim_region r ON f.region_id = r.region_id
+JOIN dim_product p ON f.product_id = p.product_id
+JOIN dim_date d ON f.date_id = d.date_id
+WHERE r.region_name = '华南'
+  AND d.date_id >= 20250101
+  AND d.date_id <= 20250331
+GROUP BY p.product_id, p.product_name
+ORDER BY 销售总额 DESC
+LIMIT 5",
+E05,按会员等级统计2025年第一季度的订单数和销售总额,medium,时间过滤 分组聚合 计数,True,True,True,42.5,"SELECT c.member_level AS 会员等级, COUNT(o.order_id) AS 订单数, SUM(o.order_amount) AS 销售总额 FROM fact_order o JOIN dim_customer c ON o.customer_id = c.customer_id WHERE o.date_id BETWEEN 20250101 AND 20250331 GROUP BY c.member_level ORDER BY 销售总额 DESC",
+E06,2025年第一季度各品牌的销售额，取前3名,medium,时间过滤 分组聚合 TopN,True,True,True,27.9,"SELECT d.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product d ON f.product_id = d.product_id WHERE f.date_id >= 20250101 AND f.date_id <= 20250331 GROUP BY d.brand ORDER BY 销售额 DESC LIMIT 3",
+E07,统计各地区的订单数量,easy,多表关联 计数,True,True,True,47.5,"SELECT r.region_name AS 地区, COUNT(f.order_id) AS 订单数量 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name",
+E08,2025年1月每天的销售额,medium,时间过滤 按天分组,True,True,False,33.4,"SELECT d.day AS 日, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE f.date_id >= 20250101 AND f.date_id <= 20250131 GROUP BY d.day ORDER BY d.day",
+E09,黄金会员在2025年第一季度的平均订单金额,medium,指标口径 值过滤 时间过滤,True,True,True,28.4,SELECT AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id WHERE c.member_level = '黄金' AND f.date_id BETWEEN 20250101 AND 20250331;,
+E10,2025年第一季度销售额超过10000元的商品品类,hard,时间过滤 分组聚合 HAVING,True,True,True,37.5,"SELECT p.category AS 商品品类, SUM(o.order_amount) AS 销售额
+FROM fact_order o
+JOIN dim_date d ON o.date_id = d.date_id
+JOIN dim_product p ON o.product_id = p.product_id
+WHERE d.quarter = 'Q1'
+GROUP BY p.category
+HAVING SUM(o.order_amount) > 10000",
+E11,各省份的客单价排名,medium,指标口径 分组聚合 排序,True,True,False,53.8,"SELECT r.province AS 省份, AVG(o.order_amount) AS 客单价, RANK() OVER (ORDER BY AVG(o.order_amount) DESC) AS 客单价排名 FROM dim_region r JOIN fact_order o ON r.region_id = o.region_id GROUP BY r.province;",
+E12,女客户在2025年第一季度的消费总额,easy,值过滤 时间过滤,True,True,True,24.7,SELECT SUM(f.order_amount) AS 消费总额 FROM fact_order f JOIN dim_customer c ON f.customer_id = c.customer_id JOIN dim_date d ON f.date_id = d.date_id WHERE c.gender = '女' AND d.year = 2025 AND d.quarter = 'Q1';,
+E13,2025年第一季度销量最高的前10个商品,medium,时间过滤 销量口径 TopN,True,True,True,48.8,"SELECT dp.product_name AS 商品名称, SUM(fo.order_quantity) AS 销量
+FROM fact_order fo
+JOIN dim_product dp ON fo.product_id = dp.product_id
+JOIN dim_date dd ON fo.date_id = dd.date_id
+WHERE dd.quarter = 'Q1' AND dd.date_id >= 20250101 AND dd.date_id < 20250401
+GROUP BY dp.product_id, dp.product_name
+ORDER BY 销量 DESC
+LIMIT 10",
+E14,鞋靴品类在2025年第一季度的销售额,easy,值过滤 时间过滤,True,True,True,200.4,SELECT SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product p ON f.product_id = p.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE p.category = '鞋靴' AND d.quarter = 'Q1' AND f.date_id BETWEEN 20250101 AND 20250331,
+E15,华东地区2025年3月的订单数,medium,值过滤 时间过滤 计数,True,True,True,53.6,SELECT COUNT(f.order_id) AS 订单数 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.region_name = '华东' AND f.date_id BETWEEN 20250301 AND 20250331;,
+E16,2025年第一季度各个月份的GMV,medium,指标口径 按月分组,True,True,True,18.3,"SELECT d.month AS month, SUM(f.order_amount) AS GMV FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.quarter = 'Q1' GROUP BY d.month ORDER BY d.month",
+E17,各会员等级的平均订单金额，从高到低排序,medium,指标口径 分组聚合 排序,True,True,True,30.2,"SELECT dc.member_level AS 会员等级, AVG(fo.order_amount) AS 平均订单金额 FROM fact_order fo JOIN dim_customer dc ON fo.customer_id = dc.customer_id GROUP BY dc.member_level ORDER BY 平均订单金额 DESC",
+E18,2025年第一季度销售额最低的3个品牌,medium,时间过滤 分组聚合 排序,True,True,True,19.9,"SELECT b.brand AS 品牌, SUM(f.order_amount) AS 销售额 FROM fact_order f JOIN dim_product b ON f.product_id = b.product_id JOIN dim_date d ON f.date_id = d.date_id WHERE d.quarter = 'Q1' AND f.date_id BETWEEN 20250101 AND 20250331 GROUP BY b.brand ORDER BY 销售额 ASC LIMIT 3",
+E19,华北和华东两个地区的销售总额对比,easy,值过滤 分组聚合,True,True,True,30.1,"SELECT r.region_name AS 地区, SUM(o.order_amount) AS 销售总额 FROM fact_order o JOIN dim_region r ON o.region_id = r.region_id WHERE r.region_name IN ('华北', '华东') GROUP BY r.region_name ORDER BY 销售总额 DESC",
+E20,铂金会员在2025年3月的消费总额,medium,值过滤 时间过滤,True,True,True,34.2,"SELECT SUM(f.order_amount) AS 消费总额
+FROM fact_order f
+JOIN dim_customer c ON f.customer_id = c.customer_id
+WHERE c.member_level = '铂金'
+  AND f.date_id BETWEEN 20250301 AND 20250331;",
+E21,2025年第一季度各商品品类的订单数,medium,时间过滤 分组计数,True,True,True,46.7,"SELECT p.category AS 商品品类, COUNT(DISTINCT o.order_id) AS 订单数 FROM fact_order o JOIN dim_product p ON o.product_id = p.product_id WHERE o.date_id BETWEEN 20250101 AND 20250331 GROUP BY p.category",
+E22,四川省的销售总额,easy,值过滤 聚合,True,True,True,11.8,SELECT SUM(f.order_amount) AS 销售总额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id WHERE r.province = '四川省',
+E23,2025年第一季度销售额最高的地区及其销售额,medium,时间过滤 聚合 TopN,True,True,True,27.7,"SELECT r.region_name AS 地区, SUM(f.order_amount) AS 销售额 FROM fact_order f INNER JOIN dim_date d ON f.date_id = d.date_id INNER JOIN dim_region r ON f.region_id = r.region_id WHERE d.date_id BETWEEN 20250101 AND 20250331 GROUP BY r.region_name ORDER BY 销售额 DESC LIMIT 1",
+E24,2025年第一季度销量最低的商品品类及其销量,medium,时间过滤 销量口径 TopN,True,True,True,100.0,"SELECT dp.category AS 商品品类, SUM(fo.order_quantity) AS 销量 FROM fact_order fo JOIN dim_product dp ON fo.product_id = dp.product_id JOIN dim_date dd ON fo.date_id = dd.date_id WHERE dd.quarter = 'Q1' AND fo.date_id BETWEEN 20250101 AND 20250331 GROUP BY dp.category ORDER BY 销量 ASC LIMIT 1",
+E25,购买过手机数码类商品的客户数量（去重）,hard,去重计数 值过滤,True,True,True,54.5,SELECT COUNT(DISTINCT f.customer_id) AS 购买过手机数码类商品的客户数量 FROM fact_order f INNER JOIN dim_product p ON f.product_id = p.product_id WHERE p.category = '手机数码',
+E26,2025年第一季度男性和女性的消费总额对比,medium,时间过滤 分组聚合,True,True,True,33.8,"SELECT c.gender AS 性别, SUM(f.order_amount) AS 消费总额 FROM fact_order f JOIN dim_date d ON f.date_id = d.date_id JOIN dim_customer c ON f.customer_id = c.customer_id WHERE d.year = 2025 AND d.quarter = 'Q1' GROUP BY c.gender",
+E27,每个大区的平均订单金额,easy,指标口径 分组聚合,True,True,True,30.1,"SELECT r.region_name AS 大区, AVG(f.order_amount) AS 平均订单金额 FROM fact_order f JOIN dim_region r ON f.region_id = r.region_id GROUP BY r.region_name ORDER BY 平均订单金额 DESC",
+E28,2025年2月销售额最高的商品及其销售额,hard,时间过滤 聚合 TopN,True,True,True,57.4,"SELECT p.product_name AS 商品名称, SUM(f.order_amount) AS 销售额
+FROM fact_order f
+JOIN dim_product p ON f.product_id = p.product_id
+WHERE f.date_id >= 20250201 AND f.date_id <= 20250228
+GROUP BY p.product_id, p.product_name
+ORDER BY 销售额 DESC
+LIMIT 1",
+E29,2025年第一季度订单金额超过5000元的订单数量,easy,时间过滤 数值过滤 计数,True,True,True,25.0,SELECT COUNT(DISTINCT f.order_id) AS 订单数量 FROM fact_order f INNER JOIN dim_date d ON f.date_id = d.date_id WHERE d.year = 2025 AND d.quarter = 'Q1' AND f.order_amount > 5000,
+E30,2025年第一季度各品牌的销量总和，只保留销量超过20的品牌,hard,时间过滤 分组聚合 HAVING,True,True,True,27.9,"SELECT dp.brand AS 品牌, SUM(fo.order_quantity) AS 销量总和 FROM fact_order fo JOIN dim_product dp ON fo.product_id = dp.product_id JOIN dim_date dd ON fo.date_id = dd.date_id WHERE dd.date_id BETWEEN 20250101 AND 20250331 GROUP BY dp.brand HAVING SUM(fo.order_quantity) > 20",

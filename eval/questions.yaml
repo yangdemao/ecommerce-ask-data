@@ -1,0 +1,370 @@
+# Text2SQL 评测题集
+#
+# 每条记录的 golden_sql 是该问题的标准答案 SQL，评测时以它的查询结果作为期望结果集。
+# 结果的正确性只看「执行结果是否一致」，不要求模型生成与标准 SQL 写法相同的语句。
+#
+# 字段说明：
+#   id         题号，报告里用来定位失败样例
+#   question   用户自然语言问题
+#   golden_sql 标准答案 SQL（不带分号）
+#   difficulty easy / medium / hard
+#   tags       考察点，用于分析模型在哪类问题上更容易出错
+#
+# 数据范围说明：示例数仓 dw 只包含 2025 年第一季度的订单数据，
+# 因此题集中的时间条件都限定在这一范围内，避免出现恒为空的结果集。
+
+- id: E01
+  question: 统计华北地区的销售总额
+  difficulty: easy
+  tags: [多表关联, 值过滤]
+  golden_sql: |
+    SELECT SUM(f.order_amount) AS sales_amount
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    WHERE r.region_name = '华北'
+
+- id: E02
+  question: 统计2025年第一季度各大区的GMV，并按GMV从高到低排序
+  difficulty: medium
+  tags: [指标口径, 时间过滤, 排序]
+  golden_sql: |
+    SELECT r.region_name, SUM(f.order_amount) AS gmv
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY r.region_name
+    ORDER BY gmv DESC
+
+- id: E03
+  question: 2025年3月各商品品类的销量和销售额
+  difficulty: medium
+  tags: [时间过滤, 分组聚合]
+  golden_sql: |
+    SELECT p.category, SUM(f.order_quantity) AS qty, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.month = 3
+    GROUP BY p.category
+
+- id: E04
+  question: 华南地区2025年第一季度销售总额最高的前5个商品
+  difficulty: hard
+  tags: [四表关联, 时间过滤, TopN]
+  golden_sql: |
+    SELECT p.product_name, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_region r ON f.region_id = r.region_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE r.region_name = '华南' AND d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.product_name
+    ORDER BY amt DESC
+    LIMIT 5
+
+- id: E05
+  question: 按会员等级统计2025年第一季度的订单数和销售总额
+  difficulty: medium
+  tags: [时间过滤, 分组聚合, 计数]
+  golden_sql: |
+    SELECT c.member_level, COUNT(*) AS order_cnt, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_customer c ON f.customer_id = c.customer_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY c.member_level
+
+- id: E06
+  question: 2025年第一季度各品牌的销售额，取前3名
+  difficulty: medium
+  tags: [时间过滤, 分组聚合, TopN]
+  golden_sql: |
+    SELECT p.brand, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.brand
+    ORDER BY amt DESC
+    LIMIT 3
+
+- id: E07
+  question: 统计各地区的订单数量
+  difficulty: easy
+  tags: [多表关联, 计数]
+  golden_sql: |
+    SELECT r.region_name, COUNT(*) AS order_cnt
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    GROUP BY r.region_name
+
+- id: E08
+  question: 2025年1月每天的销售额
+  difficulty: medium
+  tags: [时间过滤, 按天分组]
+  golden_sql: |
+    SELECT f.date_id, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.month = 1
+    GROUP BY f.date_id
+
+- id: E09
+  question: 黄金会员在2025年第一季度的平均订单金额
+  difficulty: medium
+  tags: [指标口径, 值过滤, 时间过滤]
+  golden_sql: |
+    SELECT AVG(f.order_amount) AS aov
+    FROM fact_order f
+    JOIN dim_customer c ON f.customer_id = c.customer_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE c.member_level = '黄金' AND d.year = 2025 AND d.quarter = 'Q1'
+
+- id: E10
+  question: 2025年第一季度销售额超过10000元的商品品类
+  difficulty: hard
+  tags: [时间过滤, 分组聚合, HAVING]
+  golden_sql: |
+    SELECT p.category, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.category
+    HAVING SUM(f.order_amount) > 10000
+
+- id: E11
+  question: 各省份的客单价排名
+  difficulty: medium
+  tags: [指标口径, 分组聚合, 排序]
+  golden_sql: |
+    SELECT r.province, AVG(f.order_amount) AS aov
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    GROUP BY r.province
+    ORDER BY aov DESC
+
+- id: E12
+  question: 女客户在2025年第一季度的消费总额
+  difficulty: easy
+  tags: [值过滤, 时间过滤]
+  golden_sql: |
+    SELECT SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_customer c ON f.customer_id = c.customer_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE c.gender = '女' AND d.year = 2025 AND d.quarter = 'Q1'
+
+- id: E13
+  question: 2025年第一季度销量最高的前10个商品
+  difficulty: medium
+  tags: [时间过滤, 销量口径, TopN]
+  golden_sql: |
+    SELECT p.product_name, SUM(f.order_quantity) AS qty
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.product_name
+    ORDER BY qty DESC
+    LIMIT 10
+
+- id: E14
+  question: 鞋靴品类在2025年第一季度的销售额
+  difficulty: easy
+  tags: [值过滤, 时间过滤]
+  golden_sql: |
+    SELECT SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE p.category = '鞋靴' AND d.year = 2025 AND d.quarter = 'Q1'
+
+- id: E15
+  question: 华东地区2025年3月的订单数
+  difficulty: medium
+  tags: [值过滤, 时间过滤, 计数]
+  golden_sql: |
+    SELECT COUNT(*) AS order_cnt
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE r.region_name = '华东' AND d.year = 2025 AND d.month = 3
+
+- id: E16
+  question: 2025年第一季度各个月份的GMV
+  difficulty: medium
+  tags: [指标口径, 按月分组]
+  golden_sql: |
+    SELECT d.month, SUM(f.order_amount) AS gmv
+    FROM fact_order f
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY d.month
+
+- id: E17
+  question: 各会员等级的平均订单金额，从高到低排序
+  difficulty: medium
+  tags: [指标口径, 分组聚合, 排序]
+  golden_sql: |
+    SELECT c.member_level, AVG(f.order_amount) AS aov
+    FROM fact_order f
+    JOIN dim_customer c ON f.customer_id = c.customer_id
+    GROUP BY c.member_level
+    ORDER BY aov DESC
+
+- id: E18
+  question: 2025年第一季度销售额最低的3个品牌
+  difficulty: medium
+  tags: [时间过滤, 分组聚合, 排序]
+  golden_sql: |
+    SELECT p.brand, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.brand
+    ORDER BY amt ASC
+    LIMIT 3
+
+- id: E19
+  question: 华北和华东两个地区的销售总额对比
+  difficulty: easy
+  tags: [值过滤, 分组聚合]
+  golden_sql: |
+    SELECT r.region_name, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    WHERE r.region_name IN ('华北', '华东')
+    GROUP BY r.region_name
+
+- id: E20
+  question: 铂金会员在2025年3月的消费总额
+  difficulty: medium
+  tags: [值过滤, 时间过滤]
+  golden_sql: |
+    SELECT SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_customer c ON f.customer_id = c.customer_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE c.member_level = '铂金' AND d.year = 2025 AND d.month = 3
+
+- id: E21
+  question: 2025年第一季度各商品品类的订单数
+  difficulty: medium
+  tags: [时间过滤, 分组计数]
+  golden_sql: |
+    SELECT p.category, COUNT(*) AS order_cnt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.category
+
+- id: E22
+  question: 四川省的销售总额
+  difficulty: easy
+  tags: [值过滤, 聚合]
+  golden_sql: |
+    SELECT SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    WHERE r.province = '四川省'
+
+- id: E23
+  question: 2025年第一季度销售额最高的地区及其销售额
+  difficulty: medium
+  tags: [时间过滤, 聚合, TopN]
+  golden_sql: |
+    SELECT r.region_name, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY r.region_name
+    ORDER BY amt DESC
+    LIMIT 1
+
+- id: E24
+  question: 2025年第一季度销量最低的商品品类及其销量
+  difficulty: medium
+  tags: [时间过滤, 销量口径, TopN]
+  golden_sql: |
+    SELECT p.category, SUM(f.order_quantity) AS qty
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.category
+    ORDER BY qty ASC
+    LIMIT 1
+
+- id: E25
+  question: 购买过手机数码类商品的客户数量（去重）
+  difficulty: hard
+  tags: [去重计数, 值过滤]
+  golden_sql: |
+    SELECT COUNT(DISTINCT f.customer_id) AS customer_cnt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    WHERE p.category = '手机数码'
+
+- id: E26
+  question: 2025年第一季度男性和女性的消费总额对比
+  difficulty: medium
+  tags: [时间过滤, 分组聚合]
+  golden_sql: |
+    SELECT c.gender, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_customer c ON f.customer_id = c.customer_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY c.gender
+
+- id: E27
+  question: 每个大区的平均订单金额
+  difficulty: easy
+  tags: [指标口径, 分组聚合]
+  golden_sql: |
+    SELECT r.region_name, AVG(f.order_amount) AS aov
+    FROM fact_order f
+    JOIN dim_region r ON f.region_id = r.region_id
+    GROUP BY r.region_name
+
+- id: E28
+  question: 2025年2月销售额最高的商品及其销售额
+  difficulty: hard
+  tags: [时间过滤, 聚合, TopN]
+  golden_sql: |
+    SELECT p.product_name, SUM(f.order_amount) AS amt
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.month = 2
+    GROUP BY p.product_name
+    ORDER BY amt DESC
+    LIMIT 1
+
+- id: E29
+  question: 2025年第一季度订单金额超过5000元的订单数量
+  difficulty: easy
+  tags: [时间过滤, 数值过滤, 计数]
+  golden_sql: |
+    SELECT COUNT(*) AS order_cnt
+    FROM fact_order f
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1' AND f.order_amount > 5000
+
+- id: E30
+  question: 2025年第一季度各品牌的销量总和，只保留销量超过20的品牌
+  difficulty: hard
+  tags: [时间过滤, 分组聚合, HAVING]
+  golden_sql: |
+    SELECT p.brand, SUM(f.order_quantity) AS qty
+    FROM fact_order f
+    JOIN dim_product p ON f.product_id = p.product_id
+    JOIN dim_date d ON f.date_id = d.date_id
+    WHERE d.year = 2025 AND d.quarter = 'Q1'
+    GROUP BY p.brand
+    HAVING SUM(f.order_quantity) > 20
